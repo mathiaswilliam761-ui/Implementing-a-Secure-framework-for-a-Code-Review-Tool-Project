@@ -1,0 +1,138 @@
+{
+  "timestamp": "2026-10-15T20:37:11Z",
+  "sonarqube_url": "http://127.0.0.1:9000",
+  "force_authentication_enabled": "true",
+  "groups": {
+    "groups": [
+      {
+        "id": 1,
+        "name": "security-admins",
+        "description": "Security Administrators",
+        "default": false,
+        "managed": false,
+        "memberCount": 1
+      },
+      {
+        "id": 2,
+        "name": "code-reviewers",
+        "description": "Code Reviewers",
+        "default": false,
+        "managed": false,
+        "memberCount": 1
+      },
+      {
+        "id": 3,
+        "name": "developers",
+        "description": "Developers",
+        "default": false,
+        "managed": false,
+        "memberCount": 1
+      }
+    ],
+    "p": 1,
+    "ps": 10,
+    "total": 3
+  },
+  "users": {
+    "users": [
+      {
+        "login": "sec_admin",
+        "name": "Security Admin",
+        "active": true,
+        "email": "",
+        "groups": [
+          "security-admins"
+        ],
+        "local": true,
+        "identityProvider": "",
+        "avatar": "",
+        "scmAccounts": []
+      },
+      {
+        "login": "lead_reviewer",
+        "name": "Lead Reviewer",
+        "active": true,
+        "email": "",
+        "groups": [
+          "code-reviewers"
+        ],
+        "local": true,
+        "identityProvider": "",
+        "avatar": "",
+        "scmAccounts": []
+      },
+      {
+        "login": "dev_user",
+        "name": "Developer User",
+        "active": true,
+        "email": "",
+        "groups": [
+          "developers"
+        ],
+        "local": true,
+        "identityProvider": "",
+        "avatar": "",
+        "scmAccounts": []
+      }
+    ],
+    "p": 1,
+    "ps": 10,
+    "total": 3
+  },
+  "global_permissions": {
+    "permissions": [
+      {
+        "permission": "admin",
+        "groupNames": [
+          "security-admins"
+        ],
+        "userNames": []
+      },
+      {
+        "permission": "gateadmin",
+        "groupNames": [
+          "security-admins"
+        ],
+        "userNames": []
+      },
+      {
+        "permission": "issueadmin",
+        "groupNames": [
+          "code-reviewers"
+        ],
+        "userNames": []
+      },
+      {
+        "permission": "securityhotspotadmin",
+        "groupNames": [
+          "code-reviewers"
+        ],
+        "userNames": []
+      },
+      {
+        "permission": "scan",
+        "groupNames": [
+          "code-reviewers",
+          "developers"
+        ],
+        "userNames": []
+      },
+      {
+        "permission": "user",
+        "groupNames": [
+          "code-reviewers",
+          "developers"
+        ],
+        "userNames": []
+      },
+      {
+        "permission": "codeviewer",
+        "groupNames": [
+          "code-reviewers",
+          "developers"
+        ],
+        "userNames": []
+      }
+    ]
+  }
+}

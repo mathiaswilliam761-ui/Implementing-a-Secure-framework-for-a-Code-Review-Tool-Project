@@ -1,0 +1,301 @@
+name: Secure Code Review Pipeline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  schedule:
+    # Nightly deep scan at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Scan type'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - fast
+          - full
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+  # =====================================================================
+  # TIER 1: Pull Request Fast Gate (runs on every PR)
+  # =====================================================================
+  pr-fast-gate:
+    name: PR Fast Gate (Tier 1)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
+    outputs:
+      has-critical: ${{ steps.check-results.outputs.has-critical }}
+      has-high: ${{ steps.check-results.outputs.has-high }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for diff-aware scanning
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: |
+            vulnerable-samples/python-app/requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: vulnerable-samples/node-app/package-lock.json
+
+      - name: Install security scanners
+        run: |
+          pip install semgrep bandit gitleaks
+          cd vulnerable-samples/node-app && npm ci
+
+      - name: Get changed files
+        id: changes
+        run: |
+          # Get files changed in PR
+          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
+          cat changed_files.txt
+
+      - name: Run Gitleaks on changed files
+        id: gitleaks
+        run: |
+          gitleaks detect --no-git --source . \
+            --report-path gitleaks-pr.json \
+            --report-format json \
+            --verbose || true
+          
+          # Check for findings
+          CRITICAL=$(jq '[.[] | select(.RuleID | test("access-token|private-key|secret"))] | length' gitleaks-pr.json)
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+
+      - name: Run Semgrep (diff-aware) on changed Python/JS files
+        id: semgrep
+        run: |
+          # Filter changed files for code files
+          grep -E '\.(py|js|ts)$' changed_files.txt > semgrep_targets.txt || true
+          
+          if [ -s semgrep_targets.txt ]; then
+            semgrep scan \
+              --config=scanners/semgrep-rules/custom-security-rules.yaml \
+              --json=semgrep-pr.json \
+              --error \
+              $(cat semgrep_targets.txt) || true
+            
+            CRITICAL=$(jq '[.results[] | select(.extra.severity=="ERROR")] | length' semgrep-pr.json)
+            HIGH=$(jq '[.results[] | select(.extra.severity=="WARNING")] | length' semgrep-pr.json)
+          else
+            CRITICAL=0
+            HIGH=0
+          fi
+          echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+
+      - name: Run Bandit on changed Python files
+        id: bandit
+        run: |
+          grep '\.py$' changed_files.txt | xargs -r bandit -r -f json -o bandit-pr.json || true
+          HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-pr.json)
+          MEDIUM=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-pr.json)
+          echo "high=$HIGH" >> $GITHUB_OUTPUT
+          echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
+
+      - name: Run ESLint on changed JS/TS files
+        id: eslint
+        run: |
+          cd vulnerable-samples/node-app
+          grep '\.js$' ../changed_files.txt | sed 's|^|../|' | xargs -r npx eslint -f json -o ../eslint-pr.json || true
+          cd ..
+          ERRORS=$(jq '[.[] | .messages[] | select(.severity==2)] | length' eslint-pr.json)
+          echo "errors=$ERRORS" >> $GITHUB_OUTPUT
+
+      - name: Check results and block on CRITICAL/HIGH
+        id: check-results
+        run: |
+          TOTAL_CRITICAL=$(( ${{ steps.gitleaks.outputs.critical }} + ${{ steps.semgrep.outputs.critical }} ))
+          TOTAL_HIGH=$(( ${{ steps.semgrep.outputs.high }} + ${{ steps.bandit.outputs.high }} + ${{ steps.eslint.outputs.errors }} ))
+          
+          echo "has-critical=$([ $TOTAL_CRITICAL -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "has-high=$([ $TOTAL_HIGH -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Tool | Critical | High | Medium |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----------|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Gitleaks | ${{ steps.gitleaks.outputs.critical }} | - | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| Semgrep | ${{ steps.semgrep.outputs.critical }} | ${{ steps.semgrep.outputs.high }} | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bandit | - | ${{ steps.bandit.outputs.high }} | ${{ steps.bandit.outputs.medium }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ESLint | - | ${{ steps.eslint.outputs.errors }} | - |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | **$TOTAL_CRITICAL** | **$TOTAL_HIGH** | **${{ steps.bandit.outputs.medium }}** |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $TOTAL_CRITICAL -gt 0 ] || [ $TOTAL_HIGH -gt 0 ]; then
+            echo "❌ **PR BLOCKED**: Found $TOTAL_CRITICAL CRITICAL and $TOTAL_HIGH HIGH severity issues"
+            exit 1
+          else
+            echo "✅ **PR PASSED**: No CRITICAL/HIGH severity issues found"
+          fi
+
+      - name: Upload PR scan artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-security-reports
+          path: |
+            *-pr.json
+            changed_files.txt
+
+  # =====================================================================
+  # TIER 2: Main Branch / Nightly Deep Scan (runs on push to main, nightly)
+  # =====================================================================
+  main-deep-scan:
+    name: Main Branch Deep Scan (Tier 2)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 60
+    permissions:
+      security-events: write  # For CodeQL SARIF upload
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: |
+            vulnerable-samples/python-app/requirements.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: vulnerable-samples/node-app/package-lock.json
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript
+          config-file: .github/codeql-config.yml
+          queries: security-extended,security-and-quality
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python,javascript"
+          upload: true
+
+      - name: Install all scanners
+        run: |
+          pip install semgrep bandit gitleaks pip-audit
+          cd vulnerable-samples/node-app && npm ci
+          npm install -g @owasp/dependency-check
+
+      - name: Run Full Gitleaks Scan (entire repo)
+        run: |
+          gitleaks detect --source . \
+            --report-path gitleaks-full.json \
+            --report-format json \
+            --verbose || true
+
+      - name: Run Full Semgrep Scan (all code)
+        run: |
+          semgrep scan \
+            --config=scanners/semgrep-rules/custom-security-rules.yaml \
+            --json=semgrep-full.json \
+            --error \
+            vulnerable-samples/ || true
+
+      - name: Run Full Bandit Scan (all Python)
+        run: |
+          bandit -r vulnerable-samples/python-app/ -f json -o bandit-full.json || true
+
+      - name: Run Full ESLint Scan (all Node.js)
+        run: |
+          cd vulnerable-samples/node-app && npx eslint . -f json -o ../../eslint-full.json || true
+
+      - name: Run Dependency Scanning (pip-audit)
+        run: |
+          pip-audit -r vulnerable-samples/python-app/requirements.txt \
+            --format json --output pip-audit-full.json || true
+
+      - name: Run Dependency Scanning (npm audit)
+        run: |
+          cd vulnerable-samples/node-app && npm audit --json > ../../npm-audit-full.json || true
+
+      - name: Run OWASP Dependency-Check
+        run: |
+          dependency-check \
+            --project "Secure Code Review" \
+            --scan vulnerable-samples/ \
+            --format JSON \
+            --out dependency-check-full.json \
+            --nvdApiKey "${{ secrets.NVD_API_KEY }}" || true
+
+      - name: Run Normalization Pipeline
+        run: |
+          python3 scripts/ingest_findings.py
+
+      - name: Upload Deep Scan Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deep-scan-reports
+          path: |
+            *-full.json
+            reports/*.db
+            reports/*.sql
+            reports/*.csv
+            reports/sonar-generic-issues.json
+
+      - name: Update SonarQube (if configured)
+        if: env.SONAR_TOKEN != ''
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=secure-code-review \
+            -Dsonar.sources=. \
+            -Dsonar.externalIssues.reportPaths=reports/sonar-generic-issues.json \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+
+      - name: Notify on critical findings
+        if: always()
+        run: |
+          CRITICAL=$(sqlite3 reports/secmetrics.db "SELECT COUNT(*) FROM findings WHERE severity='CRITICAL';")
+          HIGH=$(sqlite3 reports/secmetrics.db "SELECT COUNT(*) FROM findings WHERE severity='HIGH';")
+          
+          if [ $CRITICAL -gt 0 ] || [ $HIGH -gt 50 ]; then
+            echo "⚠️ Nightly scan found $CRITICAL CRITICAL and $HIGH HIGH issues"
+            # Could add Slack/Email notification here
+          fi
+
+# =====================================================================
+# BRANCH PROTECTION RULES (configure in GitHub Settings)
+# =====================================================================
+# Required status checks:
+# - "PR Fast Gate (Tier 1)"
+# - "Main Branch Deep Scan (Tier 2)" (on main)
+#
+# Branch protection for main:
+# - Require pull request reviews (2 approvals)
+# - Require status checks to pass
+# - Require branches to be up to date
+# - Include administrators
+# - Restrict pushes to main

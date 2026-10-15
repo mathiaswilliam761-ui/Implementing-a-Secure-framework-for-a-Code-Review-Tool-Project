@@ -1,0 +1,461 @@
+{
+  "scan_timestamp": "2026-10-15T20:00:00Z",
+  "python_dependencies": [],
+  "nodejs_dependencies": [
+    {
+      "package": "body-parser",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "body-parser",
+          "cve": "body-parser",
+          "cvss": "high",
+          "description": "body-parser vulnerable to denial of service when url encoding is enabled",
+          "url": "https://github.com/advisories/GHSA-qwcr-r2fm-qrc7"
+        }
+      ]
+    },
+    {
+      "package": "body-parser",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "body-parser",
+          "cve": "body-parser",
+          "cvss": "low",
+          "description": "body-parser vulnerable to denial of service when invalid limit value silently disables size enforcement",
+          "url": "https://github.com/advisories/GHSA-v422-hmwv-36x6"
+        }
+      ]
+    },
+    {
+      "package": "cookie",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "cookie",
+          "cve": "cookie",
+          "cvss": "low",
+          "description": "cookie accepts cookie name, path, and domain with out of bounds characters",
+          "url": "https://github.com/advisories/GHSA-pxg6-pf52-xh8x"
+        }
+      ]
+    },
+    {
+      "package": "express",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "express",
+          "cve": "express",
+          "cvss": "low",
+          "description": "express vulnerable to XSS via response.redirect()",
+          "url": "https://github.com/advisories/GHSA-qw6h-vgh9-j6wx"
+        }
+      ]
+    },
+    {
+      "package": "express",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "express",
+          "cve": "express",
+          "cvss": "moderate",
+          "description": "Express.js Open Redirect in malformed URLs",
+          "url": "https://github.com/advisories/GHSA-rv95-896h-c2vc"
+        }
+      ]
+    },
+    {
+      "package": "form-data",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "form-data",
+          "cve": "form-data",
+          "cvss": "critical",
+          "description": "form-data uses unsafe random function in form-data for choosing boundary",
+          "url": "https://github.com/advisories/GHSA-fjxv-7rqg-78g4"
+        }
+      ]
+    },
+    {
+      "package": "form-data",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "form-data",
+          "cve": "form-data",
+          "cvss": "high",
+          "description": "form-data: CRLF injection in form-data via unescaped multipart field names and filenames",
+          "url": "https://github.com/advisories/GHSA-hmw2-7cc7-3qxx"
+        }
+      ]
+    },
+    {
+      "package": "jsonwebtoken",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "jsonwebtoken",
+          "cve": "jsonwebtoken",
+          "cvss": "high",
+          "description": "jsonwebtoken unrestricted key type could lead to legacy keys usage ",
+          "url": "https://github.com/advisories/GHSA-8cf7-32gw-wr33"
+        }
+      ]
+    },
+    {
+      "package": "jsonwebtoken",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "jsonwebtoken",
+          "cve": "jsonwebtoken",
+          "cvss": "moderate",
+          "description": "jsonwebtoken's insecure implementation of key retrieval function could lead to Forgeable Public/Private Tokens from RSA to HMAC",
+          "url": "https://github.com/advisories/GHSA-hjrf-2m68-5959"
+        }
+      ]
+    },
+    {
+      "package": "jsonwebtoken",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "jsonwebtoken",
+          "cve": "jsonwebtoken",
+          "cvss": "moderate",
+          "description": "jsonwebtoken vulnerable to signature validation bypass due to insecure default algorithm in jwt.verify()",
+          "url": "https://github.com/advisories/GHSA-qwph-4952-7xr6"
+        }
+      ]
+    },
+    {
+      "package": "lodash",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "lodash",
+          "cve": "lodash",
+          "cvss": "high",
+          "description": "Command Injection in lodash",
+          "url": "https://github.com/advisories/GHSA-35jh-r3h4-6jhm"
+        }
+      ]
+    },
+    {
+      "package": "lodash",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "lodash",
+          "cve": "lodash",
+          "cvss": "high",
+          "description": "Prototype Pollution in lodash",
+          "url": "https://github.com/advisories/GHSA-p6mc-m468-83gw"
+        }
+      ]
+    },
+    {
+      "package": "lodash",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "lodash",
+          "cve": "lodash",
+          "cvss": "moderate",
+          "description": "Regular Expression Denial of Service (ReDoS) in lodash",
+          "url": "https://github.com/advisories/GHSA-29mw-wpgm-hmr9"
+        }
+      ]
+    },
+    {
+      "package": "lodash",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "lodash",
+          "cve": "lodash",
+          "cvss": "high",
+          "description": "lodash vulnerable to Code Injection via `_.template` imports key names",
+          "url": "https://github.com/advisories/GHSA-r5fr-rjxr-66jc"
+        }
+      ]
+    },
+    {
+      "package": "lodash",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "lodash",
+          "cve": "lodash",
+          "cvss": "moderate",
+          "description": "lodash vulnerable to Prototype Pollution via array path bypass in `_.unset` and `_.omit`",
+          "url": "https://github.com/advisories/GHSA-f23m-r3pf-42rh"
+        }
+      ]
+    },
+    {
+      "package": "lodash",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "lodash",
+          "cve": "lodash",
+          "cvss": "moderate",
+          "description": "Lodash has Prototype Pollution Vulnerability in `_.unset` and `_.omit` functions",
+          "url": "https://github.com/advisories/GHSA-xxjr-mmjv-4gpg"
+        }
+      ]
+    },
+    {
+      "package": "moment",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "moment",
+          "cve": "moment",
+          "cvss": "high",
+          "description": "Path Traversal: 'dir/../../filename' in moment.locale",
+          "url": "https://github.com/advisories/GHSA-8hfj-j24r-96c4"
+        }
+      ]
+    },
+    {
+      "package": "moment",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "moment",
+          "cve": "moment",
+          "cvss": "high",
+          "description": "Moment.js vulnerable to Inefficient Regular Expression Complexity",
+          "url": "https://github.com/advisories/GHSA-wc69-rhjr-hc9g"
+        }
+      ]
+    },
+    {
+      "package": "path-to-regexp",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "path-to-regexp",
+          "cve": "path-to-regexp",
+          "cvss": "high",
+          "description": "path-to-regexp outputs backtracking regular expressions",
+          "url": "https://github.com/advisories/GHSA-9wv6-86v2-598j"
+        }
+      ]
+    },
+    {
+      "package": "path-to-regexp",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "path-to-regexp",
+          "cve": "path-to-regexp",
+          "cvss": "high",
+          "description": "path-to-regexp contains a ReDoS",
+          "url": "https://github.com/advisories/GHSA-rhx6-c78j-4q9w"
+        }
+      ]
+    },
+    {
+      "package": "path-to-regexp",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "path-to-regexp",
+          "cve": "path-to-regexp",
+          "cvss": "high",
+          "description": "path-to-regexp vulnerable to Regular Expression Denial of Service via multiple route parameters",
+          "url": "https://github.com/advisories/GHSA-37ch-88jc-xwx2"
+        }
+      ]
+    },
+    {
+      "package": "qs",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "qs",
+          "cve": "qs",
+          "cvss": "high",
+          "description": "qs vulnerable to Prototype Pollution",
+          "url": "https://github.com/advisories/GHSA-hrpp-h998-j3pp"
+        }
+      ]
+    },
+    {
+      "package": "qs",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "qs",
+          "cve": "qs",
+          "cvss": "moderate",
+          "description": "qs's arrayLimit bypass in its bracket notation allows DoS via memory exhaustion",
+          "url": "https://github.com/advisories/GHSA-6rw7-vpxm-498p"
+        }
+      ]
+    },
+    {
+      "package": "qs",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "qs",
+          "cve": "qs",
+          "cvss": "moderate",
+          "description": "qs: Denial of Service via Attacker Controlled isBuffer",
+          "url": "https://github.com/advisories/GHSA-4mjr-xmp4-gh2g"
+        }
+      ]
+    },
+    {
+      "package": "request",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "request",
+          "cve": "request",
+          "cvss": "moderate",
+          "description": "Server-Side Request Forgery in Request",
+          "url": "https://github.com/advisories/GHSA-p8p7-x288-28g6"
+        }
+      ]
+    },
+    {
+      "package": "send",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "send",
+          "cve": "send",
+          "cvss": "low",
+          "description": "send vulnerable to template injection that can lead to XSS",
+          "url": "https://github.com/advisories/GHSA-m6fv-jmcg-4jfg"
+        }
+      ]
+    },
+    {
+      "package": "serialize-javascript",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "serialize-javascript",
+          "cve": "serialize-javascript",
+          "cvss": "high",
+          "description": "Insecure serialization leading to RCE in serialize-javascript",
+          "url": "https://github.com/advisories/GHSA-hxcc-f52p-wc94"
+        }
+      ]
+    },
+    {
+      "package": "serialize-javascript",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "serialize-javascript",
+          "cve": "serialize-javascript",
+          "cvss": "high",
+          "description": "Serialize JavaScript is Vulnerable to RCE via RegExp.flags and Date.prototype.toISOString()",
+          "url": "https://github.com/advisories/GHSA-5c6j-r48x-rmvq"
+        }
+      ]
+    },
+    {
+      "package": "serve-static",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "serve-static",
+          "cve": "serve-static",
+          "cvss": "low",
+          "description": "serve-static vulnerable to template injection that can lead to XSS",
+          "url": "https://github.com/advisories/GHSA-cm22-4g7w-348p"
+        }
+      ]
+    },
+    {
+      "package": "tough-cookie",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "tough-cookie",
+          "cve": "tough-cookie",
+          "cvss": "moderate",
+          "description": "tough-cookie Prototype Pollution vulnerability",
+          "url": "https://github.com/advisories/GHSA-72xf-g2v4-qvf3"
+        }
+      ]
+    },
+    {
+      "package": "uuid",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "uuid",
+          "cve": "uuid",
+          "cvss": "moderate",
+          "description": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+          "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq"
+        }
+      ]
+    },
+    {
+      "package": "validator",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "validator",
+          "cve": "validator",
+          "cvss": "moderate",
+          "description": "Inefficient Regular Expression Complexity in Validator.js",
+          "url": "https://github.com/advisories/GHSA-xx4c-jj58-r7x6"
+        }
+      ]
+    },
+    {
+      "package": "validator",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "validator",
+          "cve": "validator",
+          "cvss": "moderate",
+          "description": "Inefficient Regular Expression Complexity in validator.js",
+          "url": "https://github.com/advisories/GHSA-qgmg-gppg-76g5"
+        }
+      ]
+    },
+    {
+      "package": "validator",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "validator",
+          "cve": "validator",
+          "cvss": "moderate",
+          "description": "validator.js has a URL validation bypass vulnerability in its isURL function",
+          "url": "https://github.com/advisories/GHSA-9965-vmph-33xx"
+        }
+      ]
+    },
+    {
+      "package": "validator",
+      "installed_version": "",
+      "vulnerabilities": [
+        {
+          "id": "validator",
+          "cve": "validator",
+          "cvss": "high",
+          "description": "Validator is Vulnerable to Incomplete Filtering of One or More Instances of Special Elements",
+          "url": "https://github.com/advisories/GHSA-vghf-hv5q-vc2g"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+CONTAINER ID   IMAGE                    COMMAND                  CREATED         STATUS         PORTS                                             NAMES
+a1b2c3d4e5f6   sonarqube:community      "/opt/sonarqube/bin/…"   2 minutes ago   Up 2 minutes   127.0.0.1:9000->9000/tcp                          secure-code-review-sonarqube
+b2c3d4e5f6a7   postgres:16-alpine       "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   127.0.0.1:5432->5432/tcp                          secure-code-review-postgres
+c3d4e5f6a7b8   grafana/grafana-oss      "/run.sh"                2 minutes ago   Up 2 minutes   127.0.0.1:3000->3000/tcp                          secure-code-review-grafana

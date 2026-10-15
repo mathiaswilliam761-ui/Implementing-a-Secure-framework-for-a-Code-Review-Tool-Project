@@ -1,0 +1,17 @@
+
+Oops! Something went wrong! :(
+
+ESLint: 8.57.1
+
+ESLint couldn't find the plugin "eslint-plugin-security".
+
+(The package "eslint-plugin-security" was not found when loaded as a Node module from the directory "/opt/data/profiles/jack/home/secure-code-review-framework/scanners/eslint".)
+
+It's likely that the plugin isn't installed correctly. Try reinstalling by running the following:
+
+    npm install eslint-plugin-security@latest --save-dev
+
+The plugin "eslint-plugin-security" was referenced from the config file in "--config".
+
+If you still can't figure out the problem, please stop by https://eslint.org/chat/help to chat with the team.
+

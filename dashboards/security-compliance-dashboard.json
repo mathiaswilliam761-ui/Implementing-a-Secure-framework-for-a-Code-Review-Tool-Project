@@ -1,0 +1,452 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 10},
+              {"color": "red", "value": 50}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""},
+        "textMode": "auto",
+        "text": {}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT COUNT(*) as total FROM findings WHERE status = 'OPEN'",
+          "refId": "A",
+          "select": [[{"params": ["total"], "type": "column"}]]
+        }
+      ],
+      "title": "Total Findings",
+      "type": "stat"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 5},
+              {"color": "red", "value": 20}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""},
+        "textMode": "auto",
+        "text": {}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT COUNT(*) as critical_high FROM findings WHERE status = 'OPEN' AND severity IN ('CRITICAL', 'HIGH')",
+          "refId": "A",
+          "select": [[{"params": ["critical_high"], "type": "column"}]]
+        }
+      ],
+      "title": "Critical + High Findings",
+      "type": "stat"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""},
+        "textMode": "auto",
+        "text": {}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT COUNT(*) as secrets FROM findings WHERE status = 'OPEN' AND tool_name = 'gitleaks'",
+          "refId": "A",
+          "select": [[{"params": ["secrets"], "type": "column"}]]
+        }
+      ],
+      "title": "Secrets Detected",
+      "type": "stat"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "orange", "value": 10},
+              {"color": "red", "value": 50}
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"values": false, "calcs": ["lastNotNull"], "fields": ""},
+        "textMode": "auto",
+        "text": {}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT COUNT(*) as vuln_deps FROM findings WHERE status = 'OPEN' AND tool_name IN ('pip-audit', 'npm-audit', 'dependency-check')",
+          "refId": "A",
+          "select": [[{"params": ["vuln_deps"], "type": "column"}]]
+        }
+      ],
+      "title": "Vulnerable Dependencies",
+      "type": "stat"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barRadius": 10, "drawStyle": "bars", "fillOpacity": 80, "groupWidth": 0.7, "hideZero": false, "lineWidth": 1, "maxValue": null, "minValue": null, "showValue": true, "stacking": "normal", "tooltip": {"mode": "single"}},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 5,
+      "options": {
+        "legend": {"calcs": [], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT severity as category, COUNT(*) as count FROM findings WHERE status = 'OPEN' GROUP BY severity ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 WHEN 'LOW' THEN 4 END",
+          "refId": "A",
+          "select": [
+            [{"params": ["severity"], "type": "column"}],
+            [{"params": ["count"], "type": "column"}]
+          ]
+        }
+      ],
+      "title": "Severity Breakdown",
+      "type": "barchart"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"hideZero": true, "pieType": "pie", "reduceOptions": {"values": false, "calcs": ["lastNotNull"]}},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "id": 6,
+      "options": {
+        "legend": {"calcs": [], "displayMode": "table", "placement": "right", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT severity as category, COUNT(*) as count FROM findings WHERE status = 'OPEN' GROUP BY severity ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 WHEN 'LOW' THEN 4 END",
+          "refId": "A",
+          "select": [
+            [{"params": ["severity"], "type": "column"}],
+            [{"params": ["count"], "type": "column"}]
+          ]
+        }
+      ],
+      "title": "Severity Distribution (Pie)",
+      "type": "piechart"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barRadius": 10, "drawStyle": "bars", "fillOpacity": 80, "groupWidth": 0.7, "hideZero": false, "lineWidth": 1, "maxValue": null, "minValue": null, "showValue": true, "stacking": "normal", "tooltip": {"mode": "single"}},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "id": 7,
+      "options": {
+        "legend": {"calcs": [], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT owasp_category as category, COUNT(*) as count FROM findings WHERE status = 'OPEN' AND owasp_category IS NOT NULL AND owasp_category != '' GROUP BY owasp_category ORDER BY count DESC",
+          "refId": "A",
+          "select": [
+            [{"params": ["owasp_category"], "type": "column"}],
+            [{"params": ["count"], "type": "column"}]
+          ]
+        }
+      ],
+      "title": "Findings by OWASP Top 10 Category",
+      "type": "barchart"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {"axisLabel": "", "axisPlacement": "auto", "barRadius": 10, "drawStyle": "bars", "fillOpacity": 80, "groupWidth": 0.7, "hideZero": false, "lineWidth": 1, "maxValue": null, "minValue": null, "showValue": true, "stacking": "normal", "tooltip": {"mode": "single"}},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 8,
+      "options": {
+        "legend": {"calcs": [], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT cwe_id as category, COUNT(*) as count FROM findings WHERE status = 'OPEN' AND cwe_id IS NOT NULL AND cwe_id != '' GROUP BY cwe_id ORDER BY count DESC LIMIT 15",
+          "refId": "A",
+          "select": [
+            [{"params": ["cwe_id"], "type": "column"}],
+            [{"params": ["count"], "type": "column"}]
+          ]
+        }
+      ],
+      "title": "Top 15 CWEs",
+      "type": "barchart"
+    },
+    {
+      "datasource": "secmetrics-postgres",
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Severity"},
+            "properties": [
+              {"id": "custom.cellOptions", "value": {"type": "basic", "color": {"fixedColor": false, "mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": "MEDIUM"}, {"color": "red", "value": "HIGH"}]}}}
+            ]
+          }
+        ]
+      },
+      "gridPos": {"h": 16, "w": 24, "x": 0, "y": 20},
+      "id": 9,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {"displayName": "Severity", "sortOrder": 1}
+        ],
+        "sortOptions": [{"label": "Severity", "value": "severity"}]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "secmetrics_postgres"},
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawSql": "SELECT tool_name as \"Tool\", rule_id as \"Rule\", severity as \"Severity\", file_path as \"File\", line_number as \"Line\", owasp_category as \"OWASP\", cwe_id as \"CWE\", cert_id as \"CERT\", description as \"Description\", remediation as \"Remediation\", status as \"Status\" FROM findings WHERE status = 'OPEN' ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 WHEN 'LOW' THEN 4 END, tool_name, file_path, line_number LIMIT 500",
+          "refId": "A",
+          "select": [[{"params": ["all"], "type": "columns"}]]
+        }
+      ],
+      "title": "Compliance & Remediation Audit Table (Exportable)",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["security", "compliance", "sast", "sca"],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "chosen": false,
+        "current": {"text": "All", "value": "$__all"},
+        "datasource": "secmetrics-postgres",
+        "definition": "SELECT DISTINCT severity FROM findings WHERE status = 'OPEN' ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 WHEN 'LOW' THEN 4 END",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Severity",
+        "multi": true,
+        "name": "severity",
+        "options": [],
+        "query": {"query": "SELECT DISTINCT severity FROM findings WHERE status = 'OPEN' ORDER BY CASE severity WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 WHEN 'LOW' THEN 4 END", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "chosen": false,
+        "current": {"text": "All", "value": "$__all"},
+        "datasource": "secmetrics-postgres",
+        "definition": "SELECT DISTINCT tool_name FROM findings WHERE status = 'OPEN' ORDER BY tool_name",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Tool",
+        "multi": true,
+        "name": "tool",
+        "options": [],
+        "query": {"query": "SELECT DISTINCT tool_name FROM findings WHERE status = 'OPEN' ORDER BY tool_name", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "chosen": false,
+        "current": {"text": "All", "value": "$__all"},
+        "datasource": "secmetrics-postgres",
+        "definition": "SELECT DISTINCT owasp_category FROM findings WHERE status = 'OPEN' AND owasp_category IS NOT NULL AND owasp_category != '' ORDER BY owasp_category",
+        "hide": 0,
+        "includeAll": true,
+        "label": "OWASP Category",
+        "multi": true,
+        "name": "owasp_category",
+        "options": [],
+        "query": {"query": "SELECT DISTINCT owasp_category FROM findings WHERE status = 'OPEN' AND owasp_category IS NOT NULL AND owasp_category != '' ORDER BY owasp_category", "refId": "StandardVariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-30d", "to": "now"},
+  "timepicker": {},
+  "timezone": "",
+  "title": "Security Compliance Dashboard",
+  "uid": "security-compliance",
+  "version": 1,
+  "weekStart": ""
+}

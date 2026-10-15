@@ -1,0 +1,10 @@
+{
+  "docker_ps": "CONTAINER ID   IMAGE                    COMMAND                  CREATED         STATUS         PORTS                                             NAMES\na1b2c3d4e5f6   sonarqube:community      \"/opt/sonarqube/bin/\u2026\"   2 minutes ago   Up 2 minutes   127.0.0.1:9000->9000/tcp                          secure-code-review-sonarqube\nb2c3d4e5f6a7   postgres:16-alpine       \"docker-entrypoint.s\u2026\"   2 minutes ago   Up 2 minutes   127.0.0.1:5432->5432/tcp                          secure-code-review-postgres\nc3d4e5f6a7b8   grafana/grafana-oss      \"/run.sh\"                2 minutes ago   Up 2 minutes   127.0.0.1:3000->3000/tcp                          secure-code-review-grafana",
+  "sonarqube_status": {
+    "status": "UP",
+    "version": "10.4.1.88267",
+    "edition": "Community"
+  },
+  "deployed_at": "2026-10-15T20:35:53Z",
+  "note": "Simulated deployment - Docker daemon not available in this environment"
+}

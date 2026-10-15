@@ -1,0 +1,20 @@
+# .gitleaksignore
+# Ignore false positives and known test secrets in reports/documentation
+
+# Ignore all reports (contain detected secrets for documentation)
+reports/
+
+# Ignore deliverables (contain vulnerable code examples for training)
+deliverables/
+
+# Ignore vulnerable samples (intentional test vulnerabilities)
+vulnerable-samples/
+
+# Ignore scanner rule files (contain example secrets in remediation examples)
+scanners/semgrep-rules/
+
+# Ignore node_modules
+node_modules/
+
+# Ignore .venv
+.venv/

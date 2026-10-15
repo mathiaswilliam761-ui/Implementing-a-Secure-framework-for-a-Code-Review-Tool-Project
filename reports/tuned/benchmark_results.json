@@ -1,0 +1,179 @@
+{
+  "benchmark_timestamp": "2026-10-15T22:02:51Z",
+  "environment": {
+    "cpu_cores": 2,
+    "project_root": "/opt/data/profiles/jack/home/secure-code-review-framework",
+    "python_version": "3.13.5"
+  },
+  "baseline_runs": [
+    {
+      "command": "semgrep scan --config scanners/semgrep-rules/custom-security-rules.yaml --ignore=.semgrepignore -j 1 --json --error vulnerable-samples/",
+      "exit_code": 2,
+      "duration_seconds": 0.142,
+      "memory_mb": 0.25,
+      "stdout": "",
+      "stderr": "Usage: semgrep scan [--help] [OPTION]\u2026 [TARGETS]\u2026\nsemgrep scan: unknown option '--ignore'\n",
+      "success": false,
+      "scanner": "semgrep",
+      "config": "baseline",
+      "target": "vulnerable-samples/",
+      "parallel": false,
+      "use_ignore": false
+    },
+    {
+      "command": "bandit -r vulnerable-samples/python-app/ -f json -q",
+      "exit_code": 1,
+      "duration_seconds": 0.156,
+      "memory_mb": 0,
+      "stdout": "{\n  \"errors\": [],\n  \"generated_at\": \"2026-10-15T22:02:43Z\",\n  \"metrics\": {\n    \"_totals\": {\n      \"CONFIDENCE.HIGH\": 6,\n      \"CONFIDENCE.LOW\": 2,\n      \"CONFIDENCE.MEDIUM\": 1,\n      \"CONFIDENCE.UNDEFINED\": 0,\n      \"SEVERITY.HIGH\": 2,\n      \"SEVERITY.LOW\": 4,\n      \"SEVERITY.MEDIUM\": 3,\n      \"SEVERITY.UNDEFINED\": 0,\n      \"loc\": 85,\n      \"nosec\": 0,\n      \"skipped_tests\": 0\n    },\n    \"vulnerable-samples/python-app/app.py\": {\n      \"CONFIDENCE.HIGH\": 6,\n      \"CONFIDENCE.LOW\": 2,\n      \"CONFIDENCE.MEDIUM\": 1,\n      \"CONFIDENCE.UNDEFINED\": 0,\n      \"SEVERITY.HIGH\": 2,\n      \"SEVERITY.LOW\": 4,\n      \"SEVERITY.MEDIUM\": 3,\n      \"SEVERITY.UNDEFINED\": 0,\n      \"loc\": 85,\n      \"nosec\": 0,\n      \"skipped_tests\": 0\n    }\n  },\n  \"results\": [\n    {\n      \"code\": \"11 import sqlite3\\n12 import subprocess\\n13 import requests\\n\",\n      \"col_offset\": 0,\n      \"end_col_offset\": 17,\n      \"filename\": \"vulnerable-samples/python-app/app.py\",\n      \"issue_confidence\": \"HIGH\",\n      \"issue_cwe\": {\n    ",
+      "stderr": "",
+      "success": false,
+      "scanner": "bandit",
+      "config": "baseline",
+      "target": "vulnerable-samples/python-app/"
+    },
+    {
+      "command": "npx eslint vulnerable-samples/node-app/server.js -f json --quiet",
+      "exit_code": 2,
+      "duration_seconds": 1.164,
+      "memory_mb": 54.82,
+      "stdout": "",
+      "stderr": "\nOops! Something went wrong! :(\n\nESLint: 10.12.0\n\nESLint couldn't find an eslint.config.* file.\n\nFrom ESLint v9.0.0, the default configuration file is now eslint.config.*.\nIf you are using a .eslintrc.* file, please follow the migration guide\nto update your configuration file to the new format:\n\nhttps://eslint.org/docs/latest/use/configure/migration-guide\n\nIf you still have problems after following the migration guide, please stop by\nhttps://eslint.org/chat/help to chat with the team.\n\n",
+      "success": false,
+      "scanner": "eslint",
+      "config": "baseline",
+      "target": "vulnerable-samples/node-app/server.js"
+    },
+    {
+      "command": "~/.local/bin/gitleaks detect --no-git --source vulnerable-samples/ --report-format json",
+      "exit_code": -1,
+      "duration_seconds": 0.001,
+      "memory_mb": 0,
+      "stdout": "",
+      "stderr": "[Errno 2] No such file or directory: '~/.local/bin/gitleaks'",
+      "success": false,
+      "scanner": "gitleaks",
+      "config": "baseline",
+      "target": "vulnerable-samples/"
+    }
+  ],
+  "optimized_runs": [
+    {
+      "command": "semgrep scan --config scanners/semgrep-rules/custom-security-rules.yaml -j 2 --json --error vulnerable-samples/",
+      "exit_code": 1,
+      "duration_seconds": 2.946,
+      "memory_mb": 0,
+      "stdout": "{\"version\":\"1.181.0\",\"results\":[{\"check_id\":\"scanners.semgrep-rules.javascript-eval-injection\",\"path\":\"vulnerable-samples/node-app/server.js\",\"start\":{\"line\":22,\"col\":24,\"offset\":761},\"end\":{\"line\":22,\"col\":38,\"offset\":775},\"extra\":{\"message\":\"Code Injection via eval() or Function constructor detected (CWE-95). User input executed as code.\\n\\n**Remediation:**\\n1. NEVER use `eval()` or `new Function()` with user input\\n2. Use safe alternatives: `JSON.parse()` for JSON, specific parsers for DSLs\\n3. If dynamic code is required, use a sandboxed environment (vm2, isolated-vm)\\n4. Implement strict allowlist validation for any dynamic behavior\\n\\n**Vulnerable Code:**\\n```javascript\\napp.get('/eval', (req, res) => {\\n    const result = eval(req.query.code);  // DANGEROUS!\\n});\\n```\\n\\n**Secure Code:**\\n```javascript\\n// If you need to evaluate math expressions, use a safe library\\nconst math = require('mathjs');\\napp.get('/calculate', (req, res) => {\\n    try {\\n        const result = math.ev",
+      "stderr": "semgrep-core rule validation failed (PatternParseError)\n               \n               \n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 Scan Status \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n  Scanning 6 files tracked by git with 10 Code rules:\n                                                                                                                        \n  Language   Rules   Files          Origin   Rules                                                                      \n \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500        \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500                                                                     \n  python         5       1          Custom      10                                                                      \n  js             5       1                                                                                              \n                                                                                                                        \n                \n                \n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 Scan Summary \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518",
+      "success": false,
+      "scanner": "semgrep",
+      "config": "optimized",
+      "target": "vulnerable-samples/",
+      "parallel": true,
+      "use_ignore": true
+    },
+    {
+      "command": "bandit -r vulnerable-samples/python-app/ -f json -q",
+      "exit_code": 1,
+      "duration_seconds": 0.157,
+      "memory_mb": 0,
+      "stdout": "{\n  \"errors\": [],\n  \"generated_at\": \"2026-10-15T22:02:48Z\",\n  \"metrics\": {\n    \"_totals\": {\n      \"CONFIDENCE.HIGH\": 6,\n      \"CONFIDENCE.LOW\": 2,\n      \"CONFIDENCE.MEDIUM\": 1,\n      \"CONFIDENCE.UNDEFINED\": 0,\n      \"SEVERITY.HIGH\": 2,\n      \"SEVERITY.LOW\": 4,\n      \"SEVERITY.MEDIUM\": 3,\n      \"SEVERITY.UNDEFINED\": 0,\n      \"loc\": 85,\n      \"nosec\": 0,\n      \"skipped_tests\": 0\n    },\n    \"vulnerable-samples/python-app/app.py\": {\n      \"CONFIDENCE.HIGH\": 6,\n      \"CONFIDENCE.LOW\": 2,\n      \"CONFIDENCE.MEDIUM\": 1,\n      \"CONFIDENCE.UNDEFINED\": 0,\n      \"SEVERITY.HIGH\": 2,\n      \"SEVERITY.LOW\": 4,\n      \"SEVERITY.MEDIUM\": 3,\n      \"SEVERITY.UNDEFINED\": 0,\n      \"loc\": 85,\n      \"nosec\": 0,\n      \"skipped_tests\": 0\n    }\n  },\n  \"results\": [\n    {\n      \"code\": \"11 import sqlite3\\n12 import subprocess\\n13 import requests\\n\",\n      \"col_offset\": 0,\n      \"end_col_offset\": 17,\n      \"filename\": \"vulnerable-samples/python-app/app.py\",\n      \"issue_confidence\": \"HIGH\",\n      \"issue_cwe\": {\n    ",
+      "stderr": "",
+      "success": false,
+      "scanner": "bandit",
+      "config": "optimized",
+      "target": "vulnerable-samples/python-app/"
+    },
+    {
+      "command": "npx eslint vulnerable-samples/node-app/server.js -f json --quiet",
+      "exit_code": 2,
+      "duration_seconds": 1.24,
+      "memory_mb": 7.26,
+      "stdout": "",
+      "stderr": "\nOops! Something went wrong! :(\n\nESLint: 10.12.0\n\nESLint couldn't find an eslint.config.* file.\n\nFrom ESLint v9.0.0, the default configuration file is now eslint.config.*.\nIf you are using a .eslintrc.* file, please follow the migration guide\nto update your configuration file to the new format:\n\nhttps://eslint.org/docs/latest/use/configure/migration-guide\n\nIf you still have problems after following the migration guide, please stop by\nhttps://eslint.org/chat/help to chat with the team.\n\n",
+      "success": false,
+      "scanner": "eslint",
+      "config": "optimized",
+      "target": "vulnerable-samples/node-app/server.js"
+    },
+    {
+      "command": "~/.local/bin/gitleaks detect --no-git --source vulnerable-samples/ --report-format json",
+      "exit_code": -1,
+      "duration_seconds": 0.001,
+      "memory_mb": 0,
+      "stdout": "",
+      "stderr": "[Errno 2] No such file or directory: '~/.local/bin/gitleaks'",
+      "success": false,
+      "scanner": "gitleaks",
+      "config": "optimized",
+      "target": "vulnerable-samples/"
+    }
+  ],
+  "diff_targeted_run": {
+    "command": "semgrep scan --config scanners/semgrep-rules/custom-security-rules.yaml -j 2 --json --error test_vuln_temp.py",
+    "exit_code": 2,
+    "duration_seconds": 1.813,
+    "memory_mb": 0,
+    "stdout": "{\"version\":\"1.181.0\",\"results\":[],\"errors\":[{\"code\":2,\"level\":\"error\",\"type\":\"SemgrepError\",\"message\":\"Invalid scanning root: test_vuln_temp.py\"}],\"paths\":{\"scanned\":[]},\"engine_requested\":\"OSS\",\"skipped_rules\":[],\"profiling_results\":[]}\n",
+    "stderr": "semgrep-core rule validation failed (PatternParseError)\n",
+    "success": false,
+    "scanner": "semgrep",
+    "config": "diff-targeted",
+    "target": "git diff",
+    "parallel": true,
+    "use_ignore": true
+  },
+  "comparison": {
+    "semgrep": {
+      "baseline_seconds": 0.142,
+      "optimized_seconds": 2.946,
+      "speedup_factor": 0.05,
+      "time_saved_seconds": -2.8,
+      "baseline_memory_mb": 0.25,
+      "optimized_memory_mb": 0,
+      "memory_saved_mb": 0.25,
+      "baseline_success": false,
+      "optimized_success": false
+    },
+    "bandit": {
+      "baseline_seconds": 0.156,
+      "optimized_seconds": 0.157,
+      "speedup_factor": 0.99,
+      "time_saved_seconds": -0.0,
+      "baseline_memory_mb": 0,
+      "optimized_memory_mb": 0,
+      "memory_saved_mb": 0,
+      "baseline_success": false,
+      "optimized_success": false
+    },
+    "eslint": {
+      "baseline_seconds": 1.164,
+      "optimized_seconds": 1.24,
+      "speedup_factor": 0.94,
+      "time_saved_seconds": -0.08,
+      "baseline_memory_mb": 54.82,
+      "optimized_memory_mb": 7.26,
+      "memory_saved_mb": 47.56,
+      "baseline_success": false,
+      "optimized_success": false
+    },
+    "gitleaks": {
+      "baseline_seconds": 0.001,
+      "optimized_seconds": 0.001,
+      "speedup_factor": 1.0,
+      "time_saved_seconds": 0.0,
+      "baseline_memory_mb": 0,
+      "optimized_memory_mb": 0,
+      "memory_saved_mb": 0,
+      "baseline_success": false,
+      "optimized_success": false
+    },
+    "semgrep-diff": {
+      "baseline_seconds": 0.142,
+      "optimized_seconds": 1.813,
+      "speedup_factor": 0.08,
+      "time_saved_seconds": -1.67,
+      "note": "Diff-targeted scan on changed files only"
+    }
+  }
+}

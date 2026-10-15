@@ -1,0 +1,444 @@
+# .gitlab-ci.yml
+# GitLab CI configuration for Secure Code Review Framework
+# Implements 2-tier automated review pipeline matching GitHub Actions
+
+stages:
+  - pr-fast-gate      # Tier 1: Fast gate on every MR
+  - deep-scan         # Tier 2: Deep scan on main branch / scheduled
+  - reporting         # Reporting & artifact upload
+
+variables:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+  GITLEAKS_VERSION: "8.30.1"
+  SEMGREP_RULES: "scanners/semgrep-rules/custom-security-rules.yaml"
+
+# Cache dependencies to speed up pipelines
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .venv/
+    - vulnerable-samples/node-app/node_modules/
+    - .cache/pip/
+    - .cache/npm/
+
+# =====================================================================
+# TIER 1: PR Fast Gate (runs on every Merge Request)
+# =====================================================================
+pr-gitleaks:
+  stage: pr-fast-gate
+  image: python:${PYTHON_VERSION}-slim
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq git curl
+    - curl -sL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C /usr/local/bin gitleaks
+    - chmod +x /usr/local/bin/gitleaks
+  script:
+    - echo "Running Gitleaks on changed files..."
+    - gitleaks detect --no-git --source . --report-path gitleaks-mr.json --report-format json --verbose || true
+    - |
+      CRITICAL=$(jq '[.[] | select(.RuleID | test("access-token|private-key|secret"))] | length' gitleaks-mr.json 2>/dev/null || echo 0)
+      if [ "$CRITICAL" -gt 0 ]; then
+        echo "❌ Gitleaks found $CRITICAL critical secrets!"
+        cat gitleaks-mr.json | jq '.[] | {RuleID, File, StartLine, Secret}'
+        exit 1
+      fi
+      echo "✅ Gitleaks passed"
+  artifacts:
+    when: always
+    reports:
+      sast: gitleaks-mr.json
+    expire_in: 1 week
+
+pr-semgrep:
+  stage: pr-fast-gate
+  image: returntocorp/semgrep:latest
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME 2>/dev/null || git fetch origin main
+  script:
+    - echo "Getting changed files for diff-aware scan..."
+    - |
+      if [ -n "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" ]; then
+        git diff --name-only origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD > changed_files.txt
+      else
+        git diff --name-only origin/main...HEAD > changed_files.txt
+      fi
+    - cat changed_files.txt
+    - |
+      # Filter for code files
+      grep -E '\.(py|js|ts)$' changed_files.txt > semgrep_targets.txt || true
+      
+      if [ -s semgrep_targets.txt ]; then
+        echo "Running Semgrep on changed files..."
+        semgrep scan \
+          --config=$SEMGREP_RULES \
+          --json=semgrep-mr.json \
+          --error \
+          $(cat semgrep_targets.txt) || true
+        
+        CRITICAL=$(jq '[.results[] | select(.extra.severity=="ERROR")] | length' semgrep-mr.json)
+        HIGH=$(jq '[.results[] | select(.extra.severity=="WARNING")] | length' semgrep-mr.json)
+        
+        if [ "$CRITICAL" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+          echo "❌ Semgrep found $CRITICAL CRITICAL and $HIGH HIGH issues!"
+          jq '.results[] | {check_id, path, start: .start.line, severity: .extra.severity, message: .extra.message}' semgrep-mr.json
+          exit 1
+        fi
+        echo "✅ Semgrep passed ($CRITICAL critical, $HIGH high)"
+      else
+        echo "No code files changed, skipping Semgrep"
+      fi
+  artifacts:
+    when: always
+    reports:
+      sast: semgrep-mr.json
+    expire_in: 1 week
+
+pr-bandit:
+  stage: pr-fast-gate
+  image: python:${PYTHON_VERSION}-slim
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - pip install bandit -q
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME 2>/dev/null || git fetch origin main
+  script:
+    - git diff --name-only origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD | grep '\.py$' > python_files.txt || true
+    - |
+      if [ -s python_files.txt ]; then
+        echo "Running Bandit on changed Python files..."
+        bandit -r $(cat python_files.txt) -f json -o bandit-mr.json || true
+        
+        HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-mr.json)
+        MEDIUM=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-mr.json)
+        
+        if [ "$HIGH" -gt 0 ]; then
+          echo "❌ Bandit found $HIGH HIGH issues!"
+          jq '.results[] | {test_id, filename, line_number, issue_severity, issue_text}' bandit-mr.json
+          exit 1
+        fi
+        echo "✅ Bandit passed ($HIGH high, $MEDIUM medium)"
+      else
+        echo "No Python files changed, skipping Bandit"
+      fi
+  artifacts:
+    when: always
+    reports:
+      sast: bandit-mr.json
+    expire_in: 1 week
+
+pr-eslint:
+  stage: pr-fast-gate
+  image: node:${NODE_VERSION}-slim
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+  before_script:
+    - cd vulnerable-samples/node-app && npm ci --prefer-offline
+    - cd ../..
+    - git fetch origin $CI_MERGE_REQUEST_TARGET_BRANCH_NAME 2>/dev/null || git fetch origin main
+  script:
+    - git diff --name-only origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...HEAD | grep -E '\.(js|ts)$' | sed 's|^|vulnerable-samples/node-app/|' > js_files.txt || true
+    - |
+      if [ -s js_files.txt ]; then
+        echo "Running ESLint on changed JS files..."
+        cd vulnerable-samples/node-app
+        npx eslint $(cat ../js_files.txt) -f json -o ../eslint-mr.json || true
+        cd ../..
+        
+        ERRORS=$(jq '[.[] | .messages[] | select(.severity==2)] | length' eslint-mr.json)
+        
+        if [ "$ERRORS" -gt 0 ]; then
+          echo "❌ ESLint found $ERRORS security errors!"
+          jq '.[] | {filePath, messages: .messages[] | select(.severity==2) | {ruleId, line, message}}' eslint-mr.json
+          exit 1
+        fi
+        echo "✅ ESLint passed ($ERRORS errors)"
+      else
+        echo "No JS/TS files changed, skipping ESLint"
+      fi
+  artifacts:
+    when: always
+    reports:
+      sast: eslint-mr.json
+    expire_in: 1 week
+
+# Gate job that summarizes all PR checks
+pr-gate-summary:
+  stage: pr-fast-gate
+  image: python:${PYTHON_VERSION}-slim
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop"'
+  needs: [pr-gitleaks, pr-semgrep, pr-bandit, pr-eslint]
+  script:
+    - echo "## Merge Request Security Gate Summary" > gate-summary.md
+    - echo "" >> gate-summary.md
+    - echo "| Tool | Status | Critical | High | Medium |" >> gate-summary.md
+    - echo "|------|--------|----------|------|--------|" >> gate-summary.md
+    
+    - |
+      # Check Gitleaks
+      if [ -f gitleaks-mr.json ]; then
+        CRIT=$(jq '[.[] | select(.RuleID | test("access-token|private-key|secret"))] | length' gitleaks-mr.json)
+        echo "| Gitleaks | $([ $CRIT -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL") | $CRIT | - | - |" >> gate-summary.md
+      else
+        echo "| Gitleaks | ⏭️ SKIPPED | - | - | - |" >> gate-summary.md
+      fi
+    
+    - |
+      # Check Semgrep
+      if [ -f semgrep-mr.json ]; then
+        CRIT=$(jq '[.results[] | select(.extra.severity=="ERROR")] | length' semgrep-mr.json)
+        HIGH=$(jq '[.results[] | select(.extra.severity=="WARNING")] | length' semgrep-mr.json)
+        echo "| Semgrep | $([ $CRIT -eq 0 ] && [ $HIGH -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL") | $CRIT | $HIGH | - |" >> gate-summary.md
+      else
+        echo "| Semgrep | ⏭️ SKIPPED | - | - | - |" >> gate-summary.md
+      fi
+    
+    - |
+      # Check Bandit
+      if [ -f bandit-mr.json ]; then
+        HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-mr.json)
+        MED=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-mr.json)
+        echo "| Bandit | $([ $HIGH -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL") | - | $HIGH | $MED |" >> gate-summary.md
+      else
+        echo "| Bandit | ⏭️ SKIPPED | - | - | - |" >> gate-summary.md
+      fi
+    
+    - |
+      # Check ESLint
+      if [ -f eslint-mr.json ]; then
+        ERR=$(jq '[.[] | .messages[] | select(.severity==2)] | length' eslint-mr.json)
+        echo "| ESLint | $([ $ERR -eq 0 ] && echo "✅ PASS" || echo "❌ FAIL") | - | $ERR | - |" >> gate-summary.md
+      else
+        echo "| ESLint | ⏭️ SKIPPED | - | - | - |" >> gate-summary.md
+      fi
+    
+    - cat gate-summary.md
+    
+    - |
+      # Final gate decision
+      TOTAL_CRIT=0
+      TOTAL_HIGH=0
+      [ -f gitleaks-mr.json ] && TOTAL_CRIT=$((TOTAL_CRIT + $(jq '[.[] | select(.RuleID | test("access-token|private-key|secret"))] | length' gitleaks-mr.json)))
+      [ -f semgrep-mr.json ] && TOTAL_CRIT=$((TOTAL_CRIT + $(jq '[.results[] | select(.extra.severity=="ERROR")] | length' semgrep-mr.json))) && TOTAL_HIGH=$((TOTAL_HIGH + $(jq '[.results[] | select(.extra.severity=="WARNING")] | length' semgrep-mr.json)))
+      [ -f bandit-mr.json ] && TOTAL_HIGH=$((TOTAL_HIGH + $(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-mr.json)))
+      [ -f eslint-mr.json ] && TOTAL_HIGH=$((TOTAL_HIGH + $(jq '[.[] | .messages[] | select(.severity==2)] | length' eslint-mr.json)))
+      
+      if [ $TOTAL_CRIT -gt 0 ] || [ $TOTAL_HIGH -gt 0 ]; then
+        echo "❌ **SECURITY GATE FAILED**: $TOTAL_CRIT CRITICAL, $TOTAL_HIGH HIGH issues found"
+        echo "Merge request blocked. Fix issues and push new commits."
+        exit 1
+      else
+        echo "✅ **SECURITY GATE PASSED**: No CRITICAL/HIGH issues"
+      fi
+
+# =====================================================================
+# TIER 2: Main Branch / Nightly Deep Scan
+# =====================================================================
+deep-codeql:
+  stage: deep-scan
+  image: github/codeql-action:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
+  variables:
+    CODEQL_ACTION_VERSION: "v3"
+  script:
+    - echo "Running CodeQL deep scan..."
+    - |
+      # CodeQL is run via GitHub Actions typically
+      # For GitLab, we use the codeql CLI
+      codeql database create codeql-db --language=python,javascript --source-root=. 2>&1 | tail -20
+      codeql database analyze codeql-db \
+        --format=sarif-latest \
+        --output=codeql-results.sarif \
+        security-extended security-and-quality 2>&1 | tail -20
+  artifacts:
+    when: always
+    reports:
+      sast: codeql-results.sarif
+    expire_in: 1 month
+
+deep-semgrep:
+  stage: deep-scan
+  image: returntocorp/semgrep:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
+  script:
+    - echo "Running full Semgrep scan on all code..."
+    - semgrep scan --config=$SEMGREP_RULES --json=semgrep-deep.json --error vulnerable-samples/ || true
+  artifacts:
+    when: always
+    reports:
+      sast: semgrep-deep.json
+    expire_in: 1 month
+
+deep-bandit:
+  stage: deep-scan
+  image: python:${PYTHON_VERSION}-slim
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "pipeline"'
+  before_script:
+    - pip install bandit -q
+  script:
+    - echo "Running full Bandit scan..."
+    - bandit -r vulnerable-samples/python-app/ -f json -o bandit-deep.json || true
+  artifacts:
+    when: always
+    reports:
+      sast: bandit-deep.json
+    expire_in: 1 month
+
+deep-dependency-check:
+  stage: deep-scan
+  image: owasp/dependency-check:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  script:
+    - echo "Running OWASP Dependency-Check..."
+    - dependency-check \
+        --project "Secure Code Review" \
+        --scan vulnerable-samples/ \
+        --format JSON \
+        --out dependency-check-deep.json \
+        --nvdApiKey "$NVD_API_KEY" || true
+  artifacts:
+    when: always
+    reports:
+      sast: dependency-check-deep.json
+    expire_in: 1 month
+
+deep-sca-python:
+  stage: deep-scan
+  image: python:${PYTHON_VERSION}-slim
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  before_script:
+    - pip install pip-audit -q
+  script:
+    - echo "Running pip-audit on Python dependencies..."
+    - pip-audit -r vulnerable-samples/python-app/requirements.txt --format json -o pip-audit-deep.json || true
+  artifacts:
+    when: always
+    reports:
+      sast: pip-audit-deep.json
+    expire_in: 1 month
+
+deep-sca-nodejs:
+  stage: deep-scan
+  image: node:${NODE_VERSION}-slim
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  before_script:
+    - cd vulnerable-samples/node-app && npm ci --prefer-offline
+  script:
+    - echo "Running npm audit on Node.js dependencies..."
+    - cd vulnerable-samples/node-app && npm audit --json > ../../npm-audit-deep.json || true
+  artifacts:
+    when: always
+    reports:
+      sast: npm-audit-deep.json
+    expire_in: 1 month
+
+# Normalization pipeline to update central database
+deep-normalize:
+  stage: deep-scan
+  image: python:${PYTHON_VERSION}-slim
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  needs: [deep-semgrep, deep-bandit, deep-sca-python, deep-sca-nodejs, deep-dependency-check]
+  before_script:
+    - pip install semgrep bandit gitleaks pip-audit -q
+    - cd vulnerable-samples/node-app && npm ci --prefer-offline && cd ../..
+  script:
+    - echo "Running normalization pipeline..."
+    - python3 scripts/ingest_findings.py
+    - echo "Database updated with latest findings"
+  artifacts:
+    when: always
+    paths:
+      - reports/secmetrics.db
+      - reports/secmetrics_postgres_seed.sql
+      - reports/sonar-generic-issues.json
+      - reports/compliance_audit_export.csv
+    expire_in: 1 month
+
+# =====================================================================
+# REPORTING STAGE
+# =====================================================================
+report-compliance:
+  stage: reporting
+  image: python:${PYTHON_VERSION}-slim
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  needs: [deep-normalize]
+  script:
+    - echo "Generating compliance report..."
+    - |
+      python3 << 'EOF'
+      import sqlite3
+      conn = sqlite3.connect("reports/secmetrics.db")
+      cursor = conn.cursor()
+      
+      print("## Compliance Report")
+      print(f"Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)")
+      print()
+      
+      cursor.execute("SELECT COUNT(*) FROM findings WHERE status='OPEN'")
+      total = cursor.fetchone()[0]
+      print(f"Total Open Findings: {total}")
+      print()
+      
+      cursor.execute("""
+        SELECT severity, COUNT(*) FROM findings 
+        WHERE status='OPEN' GROUP BY severity
+      """)
+      print("### By Severity")
+      for row in cursor.fetchall():
+        print(f"- {row[0]}: {row[1]}")
+      print()
+      
+      cursor.execute("""
+        SELECT owasp_category, COUNT(*) FROM findings 
+        WHERE status='OPEN' AND owasp_category != '' 
+        GROUP BY owasp_category ORDER BY COUNT(*) DESC
+      """)
+      print("### By OWASP Category")
+      for row in cursor.fetchall():
+        print(f"- {row[0]}: {row[1]}")
+      print()
+      
+      conn.close()
+      EOF
+  artifacts:
+    when: always
+    paths:
+      - reports/*.csv
+      - reports/*.json
+    expire_in: 3 months
+
+# =====================================================================
+# SCHEDULES (defined in GitLab UI, shown here for reference)
+# =====================================================================
+# Nightly deep scan: Settings > CI/CD > Schedules
+# Cron: 0 2 * * * (2 AM UTC daily)
+# Target branch: main
+# Variables: NIGHTLY_SCAN=true
