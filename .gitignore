@@ -1,0 +1,50 @@
+# Secure Code Review Framework - Git Ignore Rules
+# Dependencies and virtual environments (NOT tracked)
+.venv/
+**/node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Gitleaks
+.gitleaksignore
+
+# Keep these directories tracked:
+# reports/ - scan outputs and compliance artifacts
+# deliverables/ - documentation
+# dashboards/ - Grafana dashboards
+# scanners/ - scanner configurations
+# scripts/ - automation scripts
+# infra/ - Docker/Grafana configs
+# vulnerable-samples/ - test applications (source only)
+# .github/ - CI/CD workflows
+# .gitlab-ci.yml - GitLab CI
+# README.md - project documentation
+# docker-compose.yml - infrastructure
