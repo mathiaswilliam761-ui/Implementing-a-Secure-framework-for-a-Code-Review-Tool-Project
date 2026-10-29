@@ -1,0 +1,12 @@
+# Gitleaks configuration - simple path-ignore only
+
+[path-ignore]
+paths = [
+    "reports/",
+    "deliverables/",
+    "vulnerable-samples/",
+    "scanners/semgrep-rules/",
+    "node_modules/",
+    ".venv/",
+    "PROJECT_DOCUMENTATION.md"
+]
