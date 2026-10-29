@@ -1,0 +1,453 @@
+rules:
+  # ============================================================
+  # PYTHON RULES (5 rules for vulnerable-samples/python-app/app.py)
+  # ============================================================
+
+  # Rule 1: SQL Injection (CWE-89)
+  - id: python-sql-injection
+    pattern-either:
+      - pattern: |
+          $X = "... $Y ..."
+          cursor.execute($X)
+      - pattern: |
+          cursor.execute(f"... {$Y} ...")
+      - pattern: |
+          cursor.execute("..." % $Y)
+      - pattern: |
+          cursor.execute("...".format($Y))
+    languages: [python]
+    severity: ERROR
+    message: |
+      SQL Injection detected (CWE-89). User input is directly concatenated into SQL query.
+      
+      **Remediation:**
+      1. Use parameterized queries (placeholders) instead of string concatenation
+      2. Never use f-strings, % formatting, or .format() for SQL queries
+      3. Use the DB-API's parameter substitution: `cursor.execute("SELECT * FROM users WHERE username = ?", (username,))`
+      
+      **Vulnerable Code:**
+      ```python
+      query = f"SELECT * FROM users WHERE username = '{user_input}'"
+      cursor.execute(query)
+      ```
+      
+      **Secure Code:**
+      ```python
+      query = "SELECT * FROM users WHERE username = ?"
+      cursor.execute(query, (user_input,))
+      ```
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-89: SQL Injection"
+      cert: "IDS00-J: Prevent SQL injection"
+      category: "injection"
+      technology: "python"
+
+  # Rule 2: OS Command Injection (CWE-78)
+  - id: python-command-injection
+    pattern-either:
+      - pattern: |
+          subprocess.run(..., shell=True, ...)
+      - pattern: |
+          subprocess.Popen(..., shell=True, ...)
+      - pattern: |
+          os.system(...)
+      - pattern: |
+          os.popen(...)
+      - pattern: |
+          commands.getstatusoutput(...)
+      - pattern: |
+          commands.getoutput(...)
+    languages: [python]
+    severity: ERROR
+    message: |
+      OS Command Injection detected (CWE-78). User input passed to shell command without validation.
+      
+      **Remediation:**
+      1. Avoid `shell=True` - pass commands as a list of arguments
+      2. Use `subprocess.run(["command", "arg1", "arg2"], ...)` instead
+      3. Validate and sanitize all user input before using in commands
+      4. Use allowlist validation for expected input patterns
+      
+      **Vulnerable Code:**
+      ```python
+      subprocess.run(f"ping -c 4 {user_input}", shell=True)
+      ```
+      
+      **Secure Code:**
+      ```python
+      # Validate input first
+      import re
+      if not re.match(r'^[a-zA-Z0-9.-]+$', user_input):
+          raise ValueError("Invalid hostname")
+      subprocess.run(["ping", "-c", "4", user_input], capture_output=True)
+      ```
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-78: OS Command Injection"
+      cert: "ENV03-C: Sanitize the environment when invoking external programs"
+      category: "injection"
+      technology: "python"
+
+  # Rule 3: Insecure YAML Deserialization (CWE-502)
+  - id: python-insecure-yaml-load
+    pattern: |
+      yaml.load($X)
+    languages: [python]
+    severity: ERROR
+    message: |
+      Insecure YAML Deserialization detected (CWE-502). `yaml.load()` without Loader allows arbitrary code execution.
+      
+      **Remediation:**
+      1. Always use `yaml.safe_load()` instead of `yaml.load()`
+      2. Never use `Loader=yaml.Loader` or `Loader=yaml.UnsafeLoader`
+      3. `safe_load()` only loads standard YAML tags (no Python objects)
+      
+      **Vulnerable Code:**
+      ```python
+      data = yaml.load(yaml_string)
+      ```
+      
+      **Secure Code:**
+      ```python
+      data = yaml.safe_load(yaml_string)
+      ```
+    metadata:
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      cert: "SER00-J: Do not deserialize untrusted data"
+      category: "deserialization"
+      technology: "python"
+
+  # Rule 4: Weak Hashing Algorithm (CWE-328)
+  - id: python-weak-hashing
+    pattern-either:
+      - pattern: |
+          hashlib.md5(...)
+      - pattern: |
+          hashlib.sha1(...)
+      - pattern: |
+          hashlib.new("md5", ...)
+      - pattern: |
+          hashlib.new("sha1", ...)
+    languages: [python]
+    severity: WARNING
+    message: |
+      Weak Cryptographic Hash detected (CWE-328). MD5 and SHA1 are cryptographically broken.
+      
+      **Remediation:**
+      1. Use SHA-256 or SHA-3 for general hashing: `hashlib.sha256(data).hexdigest()`
+      2. For passwords, use proper KDF: `hashlib.pbkdf2_hmac('sha256', password, salt, 100000)`
+      3. Better yet, use `bcrypt`, `scrypt`, or `argon2` libraries
+      4. Always use a unique salt per password
+      
+      **Vulnerable Code:**
+      ```python
+      hashlib.md5(password.encode()).hexdigest()
+      ```
+      
+      **Secure Code:**
+      ```python
+      import secrets, hashlib
+      salt = secrets.token_bytes(16)
+      hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+      # Store: salt + hash
+      ```
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-328: Use of Weak Hash"
+      cert: "MSC32-C: Do not use weak cryptographic algorithms"
+      category: "cryptography"
+      technology: "python"
+
+  # Rule 5: Hardcoded Secrets (CWE-798)
+  - id: python-hardcoded-secret
+    pattern-either:
+      - pattern: |
+          $VAR = "TEST_STRIPE_KEY_..."
+      - pattern: |
+          $VAR = "TEST_STRIPE_TEST_..."
+      - pattern: |
+          $VAR = "TEST_GOOGLE_API_KEY_..."
+      - pattern: |
+          $VAR = "TEST_BEARER_..."
+      - pattern: |
+          API_KEY = "..."
+      - pattern: |
+          SECRET_KEY = "..."
+      - pattern: |
+          DATABASE_URL = "..."
+      - pattern: |
+          PASSWORD = "..."
+    languages: [python]
+    severity: ERROR
+    message: |
+      Hardcoded Secret detected (CWE-798). Credentials, API keys, or secrets in source code.
+      
+      **Remediation:**
+      1. Never commit secrets to source control
+      2. Use environment variables: `os.environ.get("API_KEY")`
+      3. Use a secrets manager (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault)
+      4. Use `.env` files (in `.gitignore`) for local development
+      5. Rotate any exposed secrets immediately
+      
+      **Vulnerable Code:**
+      ```python
+      API_KEY = "TEST_STRIPE_KEY_SK_live_51H8xYzK9mN2pQ4rT6vB8wE1uI3oP5aS7dF9gH2jK4lZ6xC8vB0nM2qW4eR7tY"
+      ```
+      
+      **Secure Code:**
+      ```python
+      import os
+      API_KEY = os.environ.get("API_KEY")
+      if not API_KEY:
+          raise ValueError("API_KEY environment variable not set")
+      ```
+    metadata:
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+      cert: "MSC41-C: Do not hard-code sensitive information"
+      category: "secrets"
+      technology: "python"
+
+  # ============================================================
+  # NODE.JS RULES (5 rules for vulnerable-samples/node-app/server.js)
+  # ============================================================
+
+  # Rule 6: eval() / Function Constructor Injection (CWE-95)
+  - id: javascript-eval-injection
+    pattern-either:
+      - pattern: eval($X)
+      - pattern: new Function($X)
+      - pattern: setTimeout($X, ...)
+      - pattern: setInterval($X, ...)
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      Code Injection via eval() or Function constructor detected (CWE-95). User input executed as code.
+      
+      **Remediation:**
+      1. NEVER use `eval()` or `new Function()` with user input
+      2. Use safe alternatives: `JSON.parse()` for JSON, specific parsers for DSLs
+      3. If dynamic code is required, use a sandboxed environment (vm2, isolated-vm)
+      4. Implement strict allowlist validation for any dynamic behavior
+      
+      **Vulnerable Code:**
+      ```javascript
+      app.get('/eval', (req, res) => {
+          const result = eval(req.query.code);  // DANGEROUS!
+      });
+      ```
+      
+      **Secure Code:**
+      ```javascript
+      // If you need to evaluate math expressions, use a safe library
+      const math = require('mathjs');
+      app.get('/calculate', (req, res) => {
+          try {
+              const result = math.evaluate(req.query.expr); // Safe parser
+              res.json({ result });
+          } catch (e) {
+              res.status(400).json({ error: 'Invalid expression' });
+          }
+      });
+      ```
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      cert: "IDS16-J: Prevent injection of executable code"
+      category: "injection"
+      technology: "javascript"
+
+  # Rule 7: Command Injection (CWE-78)
+  - id: javascript-command-injection
+    pattern-either:
+      - pattern: |
+          exec($X, ...)
+      - pattern: |
+          spawn($X, ..., {shell: true})
+      - pattern: |
+          execSync($X)
+      - pattern: |
+          spawnSync($X, ..., {shell: true})
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      OS Command Injection detected (CWE-78). User input passed to shell command.
+      
+      **Remediation:**
+      1. Avoid `shell: true` - pass command and args separately
+      2. Use `spawn('command', ['arg1', 'arg2'])` without shell
+      3. Validate input against allowlist (e.g., IP address regex, hostname regex)
+      4. Never concatenate user input into command strings
+      
+      **Vulnerable Code:**
+      ```javascript
+      exec(`ping -c 4 ${host}`, (err, stdout) => { ... });
+      ```
+      
+      **Secure Code:**
+      ```javascript
+      const { spawn } = require('child_process');
+      const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+      const hostnameRegex = /^[a-zA-Z0-9.-]+$/;
+      
+      if (!ipv4Regex.test(host) && !hostnameRegex.test(host)) {
+          return res.status(400).json({ error: 'Invalid host format' });
+      }
+      
+      const proc = spawn('ping', ['-c', '4', host]); // No shell!
+      let output = '';
+      proc.stdout.on('data', (data) => { output += data; });
+      proc.on('close', () => res.json({ output }));
+      ```
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-78: OS Command Injection"
+      cert: "ENV03-C: Sanitize the environment when invoking external programs"
+      category: "injection"
+      technology: "javascript"
+
+  # Rule 8: Path Traversal (CWE-22)
+  - id: javascript-path-traversal
+    pattern-either:
+      - pattern: |
+          path.join(..., $USER_INPUT)
+      - pattern: |
+          fs.readFile($USER_INPUT, ...)
+      - pattern: |
+          fs.readFileSync($USER_INPUT, ...)
+      - pattern: |
+          res.sendFile($USER_INPUT)
+      - pattern: |
+          res.download($USER_INPUT)
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      Path Traversal detected (CWE-22). User input used in file path without validation.
+      
+      **Remediation:**
+      1. Use `path.basename()` to get only the filename
+      2. Validate filename against allowlist pattern
+      3. Use `path.resolve()` and verify it's within allowed directory
+      4. Never use user input directly in `fs` operations or `sendFile`/`download`
+      
+      **Vulnerable Code:**
+      ```javascript
+      const filePath = path.join(__dirname, 'data', filename);
+      fs.readFile(filePath, 'utf8', (err, data) => { ... });
+      ```
+      
+      **Secure Code:**
+      ```javascript
+      const safeName = path.basename(filename);
+      if (safeName !== filename || safeName.includes('..')) {
+          return res.status(400).json({ error: 'Invalid filename' });
+      }
+      const filePath = path.join(__dirname, 'data', safeName);
+      fs.readFile(filePath, 'utf8', (err, data) => { ... });
+      ```
+    metadata:
+      owasp: "A01:2021 - Broken Access Control"
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory"
+      cert: "FIO05-J: Do not expose the absolute path of a file"
+      category: "path-traversal"
+      technology: "javascript"
+
+  # Rule 9: ReDoS - Catastrophic Backtracking (CWE-1333)
+  - id: javascript-redos
+    pattern-either:
+      - pattern: |
+          /^($[A-Z]+[*+?])+$/.test(...)
+      - pattern: |
+          /^(\w+\s*)+$/.test(...)
+      - pattern: |
+          /([a-zA-Z]+[-._]?)*[a-zA-Z]+@/.test(...)
+      - pattern: |
+          new RegExp($USER_INPUT).test(...)
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: |
+      Regular Expression Denial of Service (ReDoS) detected (CWE-1333). Vulnerable regex can cause catastrophic backtracking.
+      
+      **Remediation:**
+      1. Avoid nested quantifiers: `(a+)+`, `(a*)*`, `(a+|b+)+`
+      2. Use non-backtracking regex engines or libraries (re2)
+      3. Set regex timeout: `new RegExp(pattern, 'u').test(str)` with external timeout
+      4. Simplify patterns - avoid `*` and `+` on groups
+      5. Use `string.startsWith()`, `string.includes()`, `string.match()` for simple checks
+      
+      **Vulnerable Code:**
+      ```javascript
+      const vulnerableRegex = /^([a-zA-Z0-9]+[-._]?)*[a-zA-Z0-9]+@([a-zA-Z0-9]+[-._]?)*[a-zA-Z0-9]+\.[a-zA-Z]{2,}$/;
+      vulnerableRegex.test(email); // Can hang on crafted input
+      ```
+      
+      **Secure Code:**
+      ```javascript
+      // Use a well-tested library for email validation
+      const validator = require('validator');
+      if (validator.isEmail(email)) { ... }
+      
+      // Or use a safe regex without nested quantifiers
+      const safeEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      safeEmailRegex.test(email);
+      ```
+    metadata:
+      owasp: "A04:2021 - Insecure Design"
+      cwe: "CWE-1333: Inefficient Regular Expression Complexity"
+      cert: "IDS17-J: Prevent regular expression denial of service"
+      category: "redos"
+      technology: "javascript"
+
+  # Rule 10: Hardcoded JWT Secret / Weak Crypto (CWE-798, CWE-328)
+  - id: javascript-hardcoded-jwt-secret
+    pattern-either:
+      - pattern: |
+          jwt.sign(..., $SECRET, ...)
+      - pattern: |
+          jwt.verify(..., $SECRET, ...)
+      - pattern: |
+          crypto.createHash('md5')...
+      - pattern: |
+          crypto.createHash('sha1')...
+      - pattern: |
+          Math.random()...
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: |
+      Hardcoded JWT Secret or Weak Cryptography detected (CWE-798, CWE-328).
+      
+      **Remediation:**
+      1. Store secrets in environment variables: `process.env.JWT_SECRET`
+      2. Use strong secrets (min 32 chars, high entropy)
+      3. For hashing, use SHA-256 or better: `crypto.createHash('sha256')`
+      4. For random tokens, use `crypto.randomBytes(32).toString('hex')`
+      5. Never use `Math.random()` for security purposes
+      
+      **Vulnerable Code:**
+      ```javascript
+      const JWT_SECRET = 'TEST_JWT_SECRET_KEY_12345678901234567890123456789012';
+      const token = jwt.sign({ user: 'alice' }, JWT_SECRET);
+      const hash = crypto.createHash('md5').update(data).digest('hex');
+      const token = Math.random().toString(36).substring(2);
+      ```
+      
+      **Secure Code:**
+      ```javascript
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET || JWT_SECRET.length < 32) {
+          throw new Error('JWT_SECRET must be set and at least 32 characters');
+      }
+      const token = jwt.sign({ user: 'alice' }, JWT_SECRET);
+      
+      const hash = crypto.createHash('sha256').update(data).digest('hex');
+      
+      const secureToken = crypto.randomBytes(32).toString('hex');
+      ```
+    metadata:
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      cwe: "CWE-798: Use of Hard-coded Credentials, CWE-328: Use of Weak Hash"
+      cert: "MSC41-C: Do not hard-code sensitive information, MSC32-C: Do not use weak cryptographic algorithms"
+      category: "secrets+cryptography"
+      technology: "javascript"

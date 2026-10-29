@@ -18,3 +18,12 @@ node_modules/
 
 # Ignore .venv
 .venv/
+
+# Ignore PROJECT_DOCUMENTATION.md (contains sanitized examples)
+PROJECT_DOCUMENTATION.md
+
+# Ignore sanitized test placeholders in test files
+# Path-based exclusions for test files with sanitized keys
+vulnerable-samples/python-app/app.py
+vulnerable-samples/node-app/server.js
+scanners/semgrep-rules/custom-security-rules.yaml
