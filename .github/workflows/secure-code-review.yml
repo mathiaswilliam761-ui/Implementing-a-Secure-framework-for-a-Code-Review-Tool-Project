@@ -60,8 +60,13 @@ jobs:
 
       - name: Install security scanners
         run: |
-          pip install semgrep bandit gitleaks
+          pip install semgrep bandit
           cd vulnerable-samples/node-app && npm ci
+          # Install Gitleaks (Go binary)
+          wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz
+          tar -xzf gitleaks_8.24.2_linux_x64.tar.gz
+          chmod +x gitleaks
+          sudo mv gitleaks /usr/local/bin/
           # Verify installations
           semgrep --version
           bandit --version
@@ -208,8 +213,13 @@ jobs:
 
       - name: Install all scanners
         run: |
-          pip install semgrep bandit gitleaks pip-audit
+          pip install semgrep bandit pip-audit
           cd vulnerable-samples/node-app && npm ci
+          # Install Gitleaks (Go binary)
+          wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz
+          tar -xzf gitleaks_8.24.2_linux_x64.tar.gz
+          chmod +x gitleaks
+          sudo mv gitleaks /usr/local/bin/
           # OWASP Dependency-Check - install if available
           if command -v dependency-check &> /dev/null; then
             echo "Dependency-Check already installed"
