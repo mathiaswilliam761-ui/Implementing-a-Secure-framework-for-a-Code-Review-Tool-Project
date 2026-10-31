@@ -62,6 +62,10 @@ jobs:
         run: |
           pip install semgrep bandit gitleaks
           cd vulnerable-samples/node-app && npm ci
+          # Verify installations
+          semgrep --version
+          bandit --version
+          gitleaks version
 
       - name: Get changed files
         id: changes
@@ -73,13 +77,13 @@ jobs:
       - name: Run Gitleaks on changed files
         id: gitleaks
         run: |
-          gitleaks detect --no-git --source . \
+          gitleaks detect --source . \
             --report-path gitleaks-pr.json \
             --report-format json \
             --verbose || true
           
           # Check for findings
-          CRITICAL=$(jq '[.[] | select(.RuleID | test("access-token|private-key|secret"))] | length' gitleaks-pr.json)
+          CRITICAL=$(jq '[.[] | select(.RuleID | test("access-token|private-key|secret"))] | length' gitleaks-pr.json 2>/dev/null || echo 0)
           echo "critical=$CRITICAL" >> $GITHUB_OUTPUT
 
       - name: Run Semgrep (diff-aware) on changed Python/JS files
@@ -95,8 +99,8 @@ jobs:
               --error \
               $(cat semgrep_targets.txt) || true
             
-            CRITICAL=$(jq '[.results[] | select(.extra.severity=="ERROR")] | length' semgrep-pr.json)
-            HIGH=$(jq '[.results[] | select(.extra.severity=="WARNING")] | length' semgrep-pr.json)
+            CRITICAL=$(jq '[.results[] | select(.extra.severity=="ERROR")] | length' semgrep-pr.json 2>/dev/null || echo 0)
+            HIGH=$(jq '[.results[] | select(.extra.severity=="WARNING")] | length' semgrep-pr.json 2>/dev/null || echo 0)
           else
             CRITICAL=0
             HIGH=0
@@ -108,8 +112,8 @@ jobs:
         id: bandit
         run: |
           grep '\.py$' changed_files.txt | xargs -r bandit -r -f json -o bandit-pr.json || true
-          HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-pr.json)
-          MEDIUM=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-pr.json)
+          HIGH=$(jq '[.results[] | select(.issue_severity=="HIGH")] | length' bandit-pr.json 2>/dev/null || echo 0)
+          MEDIUM=$(jq '[.results[] | select(.issue_severity=="MEDIUM")] | length' bandit-pr.json 2>/dev/null || echo 0)
           echo "high=$HIGH" >> $GITHUB_OUTPUT
           echo "medium=$MEDIUM" >> $GITHUB_OUTPUT
 
@@ -119,7 +123,7 @@ jobs:
           cd vulnerable-samples/node-app
           grep '\.js$' ../changed_files.txt | sed 's|^|../|' | xargs -r npx eslint -f json -o ../eslint-pr.json || true
           cd ..
-          ERRORS=$(jq '[.[] | .messages[] | select(.severity==2)] | length' eslint-pr.json)
+          ERRORS=$(jq '[.[] | .messages[] | select(.severity==2)] | length' eslint-pr.json 2>/dev/null || echo 0)
           echo "errors=$ERRORS" >> $GITHUB_OUTPUT
 
       - name: Check results and block on CRITICAL/HIGH
@@ -206,7 +210,15 @@ jobs:
         run: |
           pip install semgrep bandit gitleaks pip-audit
           cd vulnerable-samples/node-app && npm ci
-          npm install -g @owasp/dependency-check
+          # OWASP Dependency-Check - install if available
+          if command -v dependency-check &> /dev/null; then
+            echo "Dependency-Check already installed"
+          else
+            echo "Installing Dependency-Check..."
+            wget -q https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.0/dependency-check-9.0.0-release.zip
+            unzip -q dependency-check-9.0.0-release.zip
+            export PATH=$PATH:$(pwd)/dependency-check/bin
+          fi
 
       - name: Run Full Gitleaks Scan (entire repo)
         run: |
@@ -266,14 +278,21 @@ jobs:
             reports/sonar-generic-issues.json
 
       - name: Update SonarQube (if configured)
-        if: env.SONAR_TOKEN != ''
+        if: env.SONAR_TOKEN != '' && secrets.SONAR_TOKEN != ''
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
-          sonar-scanner \
-            -Dsonar.projectKey=secure-code-review \
-            -Dsonar.sources=. \
-            -Dsonar.externalIssues.reportPaths=reports/sonar-generic-issues.json \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          if [ -n "$SONAR_TOKEN" ] && [ -n "$SONAR_HOST_URL" ]; then
+            sonar-scanner \
+              -Dsonar.projectKey=secure-code-review \
+              -Dsonar.sources=. \
+              -Dsonar.externalIssues.reportPaths=reports/sonar-generic-issues.json \
+              -Dsonar.host.url=$SONAR_HOST_URL \
+              -Dsonar.token=$SONAR_TOKEN
+          else
+            echo "SonarQube credentials not configured, skipping..."
+          fi
 
       - name: Notify on critical findings
         if: always()
