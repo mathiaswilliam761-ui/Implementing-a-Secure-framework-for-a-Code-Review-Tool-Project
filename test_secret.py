@@ -1,1 +1,1 @@
-STRIPE_KEY="sk_live_TEST123"
+password = "mysecretpassword123"
